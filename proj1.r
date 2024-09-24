@@ -1,5 +1,8 @@
+## Yilin Chen s2134652;
+##
+
 ## comment out of submitted
-setwd("D:/OneDrive/文档/Yilin/Edinburgh/Statistical Programming/Assignment1")
+#setwd("D:/OneDrive/文档/Yilin/Edinburgh/Statistical Programming/Assignment1") # nolint
 
 a <- scan(
   "4300-0.txt", # file name
