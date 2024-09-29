@@ -1,4 +1,4 @@
-## Yilin Chen s2134652; Xuanyu Hu s2676244;
+## Yilin Chen s2134652; Xuanyu Hu s2676244;Xiaotian Xing s2661110
 ##
 
 ## comment out of submitted
@@ -73,3 +73,99 @@ for (i in 1:(mlag + 1)) {
 }
 
 M
+
+# Set the number of words to simulate
+nw <- 50
+
+# Function to sample a word based on the probabilities
+sample_word <- function(word_probs) {
+  return(sample(b, 1, prob = word_probs, replace = TRUE))
+}
+
+# Initialize a vector to store the generated text
+simulated_text <- vector("character", nw)
+
+# Generate the first token by sampling randomly from all non-NA tokens
+initial_token_index <- sample(which(!is.na(index_vector)), 1)
+simulated_text[1] <- b[index_vector[initial_token_index]]
+
+# Now simulate the rest of the tokens
+for (i in 2:nw) {
+  # Get the previous mlag words
+  prev_tokens <- simulated_text[max(1, i - mlag):(i - 1)]
+  
+  # Find the corresponding indices in M
+  last_indices <- match(prev_tokens, b)
+  
+  # Calculate the probabilities based on the model
+  # Here, you can define how probabilities are assigned
+  # For simplicity, let's assume uniform probabilities for now
+  word_probs <- rep(1/length(b), length(b)) # Adjust this as needed based on your model
+  
+  # Sample the next word based on the previous tokens
+  next_word <- sample_word(word_probs)
+  
+  # Store the sampled word
+  simulated_text[i] <- next_word
+}
+
+# Print the generated text
+cat(simulated_text, sep = " ")
+
+
+# Set the number of words to simulate
+nw <- 50
+
+# Get the total count of all words for probability calculation
+total_word_count <- sum(word_counts)
+
+# Calculate probabilities based on frequencies
+word_probs <- word_counts / total_word_count
+
+# Initialize a vector to store the generated text
+simulated_text_freq <- vector("character", nw)
+
+# Generate the first token by sampling from all common words
+simulated_text_freq[1] <- sample(b, 1, prob = word_probs)
+
+# Now simulate the rest of the tokens
+for (i in 2:nw) {
+  # Sample the next word independently based on the common word probabilities
+  next_word <- sample(b, 1, prob = word_probs)
+  simulated_text_freq[i] <- next_word
+}
+
+# Print the generated text
+cat(simulated_text_freq, sep = " ")
+
+
+# Find capitalized words in the original text
+capitalized_words <- unique(b[grepl("^[A-Z]", b)])
+
+# Function to adjust word casing based on the original text
+capitalize_word <- function(word) {
+  if (word %in% capitalized_words) {
+    return(toupper(substring(word, 1, 1)) %>% paste0(tail(strsplit(word, "")[[1]], -1), collapse = ""))
+  }
+  return(word)
+}
+
+# Create a modified vector b for printing with proper casing
+modified_b <- sapply(b, capitalize_word)
+
+# Generate the 50-word section again, but using modified_b for printing
+simulated_text_with_cap <- vector("character", nw)
+simulated_text_with_cap[1] <- sample(modified_b, 1, prob = word_probs)
+
+for (i in 2:nw) {
+  next_word <- sample(modified_b, 1, prob = word_probs)
+  simulated_text_with_cap[i] <- next_word
+}
+
+# Clean up spaces before punctuation
+formatted_text <- gsub(" ([[:punct:]])", "\\1", paste(simulated_text_with_cap, collapse = " "))
+
+# Print the generated text with proper capitalization and punctuation handling
+cat(formatted_text)
+
+
