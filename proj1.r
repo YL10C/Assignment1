@@ -22,10 +22,10 @@ split_punct <- function(a) {
   res <- rep("", length(ia) + length(a))
   ## where should punct go in res
   iia <- ia + 1:length(ia)
-  # insert puncts
-  res[iia] <- substr(a[ia], nchar(a[ia]), nchar(a[ia]))
-  # insert words before puncts # nolint
-  res[iia - 1] <- substr(a[ia], 1, nchar(a[ia]) - 1)
+  # insert puncts (extract all trailing punctuation)
+  res[iia] <- sub(".*?([[:punct:]]+)$", "\\1", a[ia])
+  # insert words before puncts (remove trailing punctuation)
+  res[iia - 1] <- sub("([[:punct:]]+)$", "", a[ia])
   # insert words do not contain punct
   res[-c(iia, iia - 1)] <- a[-ia]
 
@@ -61,7 +61,7 @@ b <- sorted_word_table[1:m, "Word"]
 mlag <- 4
 
 # Match the lower case Ulysses text to the common words vector
-index_vector <- match(lower_a, b)
+index_vector <- match(lower_a, b) # include NA
 
 # Create the matrix M
 n <- length(index_vector) # Length of the index vector
