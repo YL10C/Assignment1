@@ -1,4 +1,4 @@
-## Yilin Chen s2134652; Xuanyu Hu s2676244;Xiaotian Xing s2661110
+## Yilin Chen s2134652; Xuanyu Hu s2676244; Xiaotian Xing s2661110
 ##
 
 ## comment out of submitted
@@ -58,7 +58,7 @@ b <- sorted_word_table[1:m, "Word"]
 
 
 # Set mlag value
-mlag <- 4
+mlag <- 6
 
 # Match the lower case Ulysses text to the common words vector
 index_vector <- match(lower_a, b) # include NA
@@ -72,71 +72,81 @@ for (i in 1:(mlag + 1)) {
   M[, i] <- index_vector[i:(n - mlag + i - 1)]
 }
 
-M
 
 # Set the number of words to simulate
 nw <- 50
 
-# Function to sample a word based on the probabilities
-sample_word <- function(word_probs) {
-  return(sample(b, 1, prob = word_probs, replace = TRUE))
-}
+generated_tokens <- rep(NA, nw)
 
-# Initialize a vector to store the generated text
-simulated_text <- vector("character", nw)
+# Identify punctuation in vector b (assuming punctuation is in 'b')
+punctuation_indices <- grep("^[[:punct:]]+$", b)  # Find indices of punctuation in 'b'
 
-# Generate the first token by sampling randomly from all non-NA tokens
-initial_token_index <- sample(which(!is.na(index_vector)), 1)
-simulated_text[1] <- b[index_vector[initial_token_index]]
+# Remove NA values and punctuation tokens from initial_tokens
+initial_tokens <- na.omit(index_vector) # Remove NA values
 
-# Now simulate the rest of the tokens
+# Remove the tokens corresponding to punctuation
+non_punct_tokens <- initial_tokens[!initial_tokens %in% punctuation_indices]
+
+# Generate the first token by sampling randomly from the non-punctuation tokens in b
+generated_tokens[1] <- sample(non_punct_tokens, 1) # I don't want the first word is a punct
+
+# i for the token going to generate
 for (i in 2:nw) {
-  # Get the previous mlag words
-  prev_tokens <- simulated_text[max(1, i - mlag):(i - 1)]
-  
-  # Find the corresponding indices in M
-  last_indices <- match(prev_tokens, b)
-  
-  # Calculate the probabilities based on the model
-  # Here, you can define how probabilities are assigned
-  # For simplicity, let's assume uniform probabilities for now
-  word_probs <- rep(1/length(b), length(b)) # Adjust this as needed based on your model
-  
-  # Sample the next word based on the previous tokens
-  next_word <- sample_word(word_probs)
-  
-  # Store the sampled word
-  simulated_text[i] <- next_word
+
+  # j for the number of tokens we depend on to generate the next
+  for (j in mlag:1) if (i > j) { ## skip lags too long for current i
+
+    # get the last j tokens in the "generated_tokens"
+    history <- generated_tokens[(i - j):(i - 1)]
+
+    # storage the candidate tokens
+    candidate <- c()
+
+    # iterate each row of matrix M
+    for (row in 1:nrow(M)) {
+      current_row <- M[row, ]
+      current_row <- current_row[!is.na(current_row)]  # remove NA
+      row_length <- length(current_row)
+
+      if (row_length > 1) {
+        matching_row <- current_row[1:(row_length - 1)] # keep the last token for generating
+
+        # if the length of history is less than or equal to the row, cut the first j tokens from the row
+        if (j <= length(matching_row)) {
+          matching_row <- matching_row[1:j]
+
+          ## if exact match, add the j + 1 column of the current_row to the candidate vector
+          if (all(history == matching_row)) {
+            candidate <- c(candidate, current_row[j + 1])
+          }
+        } else { # for the situation j > length(matching_row), cut the last part from 'history'
+          history_trimmed <- history[(j - length(matching_row) + 1):j]
+
+          ## if exact match, add the last column of the current_row to the candidate vector
+          if (all(history_trimmed == matching_row)) {
+            candidate <- c(candidate, current_row[length(matching_row) + 1])
+          }
+        }
+      }
+    }
+
+    # if candidate is empty, randomly select from initial_tokens
+    if (length(candidate) == 0) {
+      generated_tokens[i] <- sample(initial_tokens, 1)
+    } else {
+      # draw one of the candidates as the generated token
+      # the probability is taken into account because there are duplicate tokens among 'candidate'
+      generated_tokens[i] <- sample(candidate, 1)
+    }
+
+    # escape the loop after successfully generating a token
+    break
+  }
 }
 
-# Print the generated text
-cat(simulated_text, sep = " ")
+cat(b[generated_tokens], sep = " ")
 
-
-# Set the number of words to simulate
-nw <- 50
-
-# Get the total count of all words for probability calculation
-total_word_count <- sum(word_counts)
-
-# Calculate probabilities based on frequencies
-word_probs <- word_counts / total_word_count
-
-# Initialize a vector to store the generated text
-simulated_text_freq <- vector("character", nw)
-
-# Generate the first token by sampling from all common words
-simulated_text_freq[1] <- sample(b, 1, prob = word_probs)
-
-# Now simulate the rest of the tokens
-for (i in 2:nw) {
-  # Sample the next word independently based on the common word probabilities
-  next_word <- sample(b, 1, prob = word_probs)
-  simulated_text_freq[i] <- next_word
-}
-
-# Print the generated text
-cat(simulated_text_freq, sep = " ")
+-------------------------------------------------------------------------------------------------------
 
 
 # Find capitalized words in the original text
@@ -167,5 +177,3 @@ formatted_text <- gsub(" ([[:punct:]])", "\\1", paste(simulated_text_with_cap, c
 
 # Print the generated text with proper capitalization and punctuation handling
 cat(formatted_text)
-
-
