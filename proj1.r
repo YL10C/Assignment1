@@ -1,9 +1,9 @@
 ## Yilin Chen s2134652; Xuanyu Hu s2676244; Xiaotian Xing s2661110
-##
+## Question1,2,3,4,8, integrate and fix all the codes (40%); Question5,6,7, generating matrix (30%); Question9,10, simulating words (30%)
 
 ## comment out of submitted
-## setwd("D:/PG-CAM/Statistical Programming") # nolint
-setwd("D:\\OneDrive\\文档\\Yilin\\Edinburgh\\Statistical Programming\\Assignment1") # nolint
+## setwd("D:/PG-CAM/Statistical Programming")
+## setwd("D:\\OneDrive\\文档\\Yilin\\Edinburgh\\Statistical Programming\\Assignment1")
 a <- scan(
   file = "4300-0.txt", # file name
   what = "character", # file are read as character vectors
@@ -13,7 +13,7 @@ a <- scan(
 )
 
 a <- gsub("_(", "", a, fixed = TRUE) ## replace "_(" by ""
-
+a <- gsub(")_", "", a, fixed = TRUE)
 
 split_punct <- function(a) {
   # index of elements containing punctuation at the end
@@ -56,9 +56,36 @@ sorted_word_table <- word_table[order(-word_table$Count), ]
 m <- 1000
 b <- sorted_word_table[1:m, "Word"]
 
+# Count whether each word starts with a capital letter
+cap_start <- grepl("^[A-Z]", res)  # 'res' is the partitioned original text vector
+
+# Count the frequency of capitalized beginning words
+cap_words <- table(tolower(res[cap_start]))
+total_words <- table(tolower(res))
+
+# Find the intersection between capital words and all words
+valid_words <- intersect(names(cap_words), names(total_words))
+
+# Find words that begin with a capital letter in most cases
+most_cap_words <- valid_words[cap_words[valid_words] / total_words[valid_words] > 0.5]
+
+
+# Capitalize the first letter
+capitalize_words <- function(x) {
+  paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x)))
+}
+
+# Replace the word in vector b with uppercase
+b_cap <- unname(sapply(b, function(word) {
+  if (word %in% most_cap_words) {
+    word <- capitalize_words(word)
+  }
+  return(word)
+}))
+
 
 # Set mlag value
-mlag <- 6
+mlag <- 4
 
 # Match the lower case Ulysses text to the common words vector
 index_vector <- match(lower_a, b) # include NA
@@ -81,7 +108,7 @@ generated_tokens <- rep(NA, nw)
 # Identify punctuation in vector b (assuming punctuation is in 'b')
 punctuation_indices <- grep("^[[:punct:]]+$", b)  # Find indices of punctuation in 'b'
 
-# Remove NA values and punctuation tokens from initial_tokens
+# Remove NA values from initial_tokens
 initial_tokens <- na.omit(index_vector) # Remove NA values
 
 # Remove the tokens corresponding to punctuation
@@ -108,10 +135,12 @@ for (i in 2:nw) {
       current_row <- current_row[!is.na(current_row)]  # remove NA
       row_length <- length(current_row)
 
-      if (row_length > 1) {
-        matching_row <- current_row[1:(row_length - 1)] # keep the last token for generating
+      if (row_length > 1) { 
+        # keep the last token for generating
+        matching_row <- current_row[1:(row_length - 1)]
 
-        # if the length of history is less than or equal to the row, cut the first j tokens from the row
+        # if the length of history is less than or equal to the row,
+        # cut the first j tokens from the row
         if (j <= length(matching_row)) {
           matching_row <- matching_row[1:j]
 
@@ -130,50 +159,44 @@ for (i in 2:nw) {
       }
     }
 
-    # if candidate is empty, randomly select from initial_tokens
-    if (length(candidate) == 0) {
-      generated_tokens[i] <- sample(initial_tokens, 1)
-    } else {
-      # draw one of the candidates as the generated token
-      # the probability is taken into account because there are duplicate tokens among 'candidate'
-      generated_tokens[i] <- sample(candidate, 1)
+    # if candidate is empty, continue j-loop
+    if (length(candidate) > 0) {
+      # Determine whether the previous generated token was a punctuation mark
+      if (generated_tokens[i - 1] %in% punctuation_indices) {
+        # If the previous token was punctuated, generate a non-punctuated token
+        non_punct_candidate <- candidate[!candidate %in% punctuation_indices]
+
+        if (length(non_punct_candidate) > 0) {
+          generated_tokens[i] <- sample(non_punct_candidate, 1)
+          # escape the loop after successfully generating a token
+          break
+        }
+
+      } else {
+        # If the previous token is not a punctuation mark, it is generated normally
+        generated_tokens[i] <- sample(candidate, 1)
+        # escape the loop after successfully generating a token
+        break
+      }
+
     }
 
-    # escape the loop after successfully generating a token
-    break
   }
 }
 
-cat(b[generated_tokens], sep = " ")
+# Prompt message
+print("Simulating 50-word sections from the model: \n")
 
--------------------------------------------------------------------------------------------------------
+# based on b_cap and remove the Spaces before punctuation
+output_text_1 <- paste(b_cap[generated_tokens], collapse = " ")
+output_text_1 <- gsub(" ([[:punct:]])", "\\1", output_text_1)  # Remove Spaces before punct
+cat(output_text_1, "\n\n")
 
+# Prompt message
+print("Simulate 50-word sections of text based on the common word frequencies: \n")
 
-# Find capitalized words in the original text
-capitalized_words <- unique(b[grepl("^[A-Z]", b)])
-
-# Function to adjust word casing based on the original text
-capitalize_word <- function(word) {
-  if (word %in% capitalized_words) {
-    return(toupper(substring(word, 1, 1)) %>% paste0(tail(strsplit(word, "")[[1]], -1), collapse = ""))
-  }
-  return(word)
-}
-
-# Create a modified vector b for printing with proper casing
-modified_b <- sapply(b, capitalize_word)
-
-# Generate the 50-word section again, but using modified_b for printing
-simulated_text_with_cap <- vector("character", nw)
-simulated_text_with_cap[1] <- sample(modified_b, 1, prob = word_probs)
-
-for (i in 2:nw) {
-  next_word <- sample(modified_b, 1, prob = word_probs)
-  simulated_text_with_cap[i] <- next_word
-}
-
-# Clean up spaces before punctuation
-formatted_text <- gsub(" ([[:punct:]])", "\\1", paste(simulated_text_with_cap, collapse = " "))
-
-# Print the generated text with proper capitalization and punctuation handling
-cat(formatted_text)
+# Simulate 50 word based on the common word frequencies
+simulate_index <- sample(initial_tokens, nw, replace = TRUE)
+output_text_2 <- paste(b_cap[simulate_index], collapse = " ")
+output_text_2 <- gsub(" ([[:punct:]])", "\\1", output_text_2)  # Remove Spaces before punct
+cat(output_text_2, "\n")
